@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>幣別資料維護</title>
+  <style>
+    body { font-family: Arial; }
+    input, button { margin: 5px; }
+    pre { background: #f8f8f8; padding: 10px; }
+  </style>
+</head>
+<body>
+  <h1>幣別資料 CRUD 操作</h1>
+
+  <h2>查詢所有幣別</h2>
+  <button onclick="fetchAll()">查詢</button>
+  <pre id="resultArea"></pre>
+
+  <h2>新增幣別</h2>
+  幣別代碼: <input id="code" type="text">
+  中文名稱: <input id="chineseName" type="text">
+  <button onclick="create()">新增</button>
+
+  <h2>更新幣別</h2>
+  幣別代碼: <input id="updateCode" type="text">
+  新中文名稱: <input id="updateChineseName" type="text">
+  <button onclick="update()">更新</button>
+
+  <h2>刪除幣別</h2>
+  幣別代碼: <input id="deleteCode" type="text">
+  <button onclick="deleteCurrency()">刪除</button>
+
+  <script>
+    const API = '/api/coindesk';
+
+    function fetchAll() {
+      fetch(API)
+        .then(res => res.json())
+        .then(data => document.getElementById('resultArea').textContent = JSON.stringify(data, null, 2))
+        .catch(err => alert('錯誤：' + err));
+    }
+
+    function create() {
+      const code = document.getElementById('code').value.trim();
+      const chineseName = document.getElementById('chineseName').value.trim();
+      fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, chineseName })
+      })
+      .then(res => res.ok ? fetchAll() : res.text().then(t => alert('新增失敗：' + t)))
+    }
+
+    function update() {
+      const code = document.getElementById('updateCode').value.trim();
+      const chineseName = document.getElementById('updateChineseName').value.trim();
+      fetch(`${API}/${code}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chineseName })
+      })
+      .then(res => res.ok ? fetchAll() : res.text().then(t => alert('更新失敗：' + t)))
+    }
+
+    function deleteCurrency() {
+      const code = document.getElementById('deleteCode').value.trim();
+      fetch(`${API}/${code}`, {
+        method: 'DELETE'
+      })
+      .then(res => res.ok ? fetchAll() : res.text().then(t => alert('刪除失敗：' + t)))
+    }
+  </script>
+</body>
+</html>
