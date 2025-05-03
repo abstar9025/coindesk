@@ -17,6 +17,8 @@
 
     <properties>
         <java.version>1.8</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
 
     <dependencies>
@@ -46,7 +48,6 @@
         <dependency>
  	   		<groupId>org.projectlombok</groupId>
     		<artifactId>lombok</artifactId>
-    		<version>1.18.38</version> 
     		<scope>provided</scope>
 		</dependency>
     </dependencies>
@@ -57,7 +58,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
@@ -69,6 +69,15 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            
+            <!-- 使用 UTF-8 編碼 -->
+    		<plugin>
+      		<groupId>org.apache.maven.plugins</groupId>
+      		<artifactId>maven-resources-plugin</artifactId>
+      		<configuration>
+        		<encoding>UTF-8</encoding>
+      		</configuration>
+    </plugin>
         </plugins>
     </build>
 </project>

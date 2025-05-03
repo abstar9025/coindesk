@@ -1,4 +1,6 @@
 CREATE TABLE currency (
-    code VARCHAR(10) PRIMARY KEY,
-    chinese_name VARCHAR(50) NOT NULL
+  code    VARCHAR(3)   PRIMARY KEY,
+  name    VARCHAR(255),
+  rate    VARCHAR(255),
+  updated TIMESTAMP
 );

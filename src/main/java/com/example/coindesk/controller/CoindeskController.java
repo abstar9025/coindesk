@@ -1,8 +1,11 @@
 package com.example.coindesk.controller;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,42 +20,72 @@ import com.example.coindesk.entity.Currency;
 import com.example.coindesk.service.CoindeskService;
 
 @RestController
-@RequestMapping("/api/coindesk")
+@RequestMapping("/api")
 public class CoindeskController {
 
 	@Autowired
-	private CoindeskService coindeskService;
+	private CoindeskService service;
 
-	// 取得所有幣別
-	@GetMapping
-	public List<Currency> getAllCurrencies() {
-		return coindeskService.getAllCurrencies();
+	/**
+	 * 讀取本地資料庫資料與更新時間
+	 */
+	@GetMapping("/coindesk/data")
+	public ResponseEntity<?> getLocalData() {
+		Map<String, Object> data = service.getLocalData();
+		return ResponseEntity.ok(data);
 	}
 
-	// 新增幣別
-	@PostMapping
-	public Currency createCurrency(@RequestBody Currency currency) {
-		return coindeskService.addCurrency(currency);
+	/**
+	 * 取得匯率資料
+	 */
+	@GetMapping("/currency")
+	public ResponseEntity<List<Currency>> listCurrency() {
+		return ResponseEntity.ok(service.listAll());
 	}
 
-	// 修改幣別
-	@PutMapping("/{code}")
-	public ResponseEntity<Currency> updateCurrency(@PathVariable String code, @RequestBody Currency updatedCurrency) {
-		Currency result = coindeskService.updateCurrency(code, updatedCurrency);
-		return result != null ? ResponseEntity.ok(result) : ResponseEntity.notFound().build();
+	/**
+	 * 新增匯率資料
+	 * 
+	 * @param currency
+	 * @return
+	 */
+	@PostMapping("/currency")
+	public ResponseEntity<?> createCurrency(@RequestBody Currency currency) {
+		try {
+			Currency created = service.create(currency);
+			return ResponseEntity.status(HttpStatus.CREATED).body(created);
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.status(HttpStatus.CONFLICT).body(Collections.singletonMap("error", e.getMessage()));
+		}
 	}
 
-	// 刪除幣別
-	@DeleteMapping("/{code}")
-	public ResponseEntity<Void> deleteCurrency(@PathVariable String code) {
-		boolean deleted = coindeskService.deleteCurrency(code);
-		return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+	/**
+	 * 依據幣別更新匯率
+	 * 
+	 * @param code 幣別
+	 * @param currency
+	 * @return
+	 */
+	@PutMapping("/currency/{code}")
+	public ResponseEntity<?> updateCurrency(@PathVariable String code, @RequestBody Currency currency) {
+		try {
+			Currency updated = service.update(code, currency);
+			return ResponseEntity.ok(updated);
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
+		}
 	}
 
-	// 查詢單一幣別
-	@GetMapping("/{code}")
-	public ResponseEntity<Currency> getCurrencyByCode(@PathVariable String code) {
-		Currency currency = coindeskService.getCurrency(code);
-		return currency != null ? ResponseEntity.ok(currency) : ResponseEntity.notFound().build();
+	/**
+	 * 刪除匯率
+	 * 
+	 * @param code 幣別
+	 * @return
+	 */
+	@DeleteMapping("/currency/{code}")
+	public ResponseEntity<?> deleteCurrency(@PathVariable String code) {
+		service.delete(code);
+		return ResponseEntity.noContent().build();
 	}
+
 }

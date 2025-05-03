@@ -1,6 +1,7 @@
 package com.example.coindesk.entity;
 
-import javax.persistence.Column;
+import java.time.LocalDateTime;
+
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
@@ -9,12 +10,33 @@ import javax.persistence.Table;
 @Table(name = "currency")
 public class Currency {
 
+	/**
+	 * 幣別
+	 */
 	@Id
-	@Column(name = "code")
 	private String code;
 
-	@Column(name = "chinese_name")
-	private String chineseName;
+	/**
+	 * 幣別中文名稱
+	 */
+	private String name;
+
+	/**
+	 * 原始匯率字串（含千分位）
+	 */
+	private String rate;
+
+	/**
+	 * 更新時間
+	 */
+	private LocalDateTime updated;
+
+	public Currency() {
+	}
+
+	public Currency(String code) {
+		this.code = code;
+	}
 
 	public String getCode() {
 		return code;
@@ -24,12 +46,28 @@ public class Currency {
 		this.code = code;
 	}
 
-	public String getChineseName() {
-		return chineseName;
+	public String getName() {
+		return name;
 	}
 
-	public void setChineseName(String chineseName) {
-		this.chineseName = chineseName;
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getRate() {
+		return rate;
+	}
+
+	public void setRate(String rate) {
+		this.rate = rate;
+	}
+
+	public LocalDateTime getUpdated() {
+		return updated;
+	}
+
+	public void setUpdated(LocalDateTime updated) {
+		this.updated = updated;
 	}
 
 }

@@ -1,74 +1,233 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
   <meta charset="UTF-8">
-  <title>幣別資料維護</title>
+  <title>Coindesk 幣別＆匯率管理</title>
   <style>
-    body { font-family: Arial; }
-    input, button { margin: 5px; }
-    pre { background: #f8f8f8; padding: 10px; }
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+
+    section {
+      margin: 20px 0;
+    }
+
+    input,
+    button {
+      margin: 4px;
+    }
+
+    table {
+      width: 600px;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th,
+    td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background: #f0f0f0;
+    }
+
+    .time {
+      background: #f4f4f4;
+      padding: 10px;
+      border-radius: 4px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin-bottom: 10px;
+    }
+
+    .input-group {
+      margin-bottom: 12px;
+    }
   </style>
 </head>
+
 <body>
-  <h1>幣別資料 CRUD 操作</h1>
+  <h1>Coindesk 幣別＆匯率管理</h1>
 
-  <h2>查詢所有幣別</h2>
-  <button onclick="fetchAll()">查詢</button>
-  <pre id="resultArea"></pre>
+  <section>
+    <h2>資料總覽</h2>
+    <div class="time">更新時間：<span id="updateTime">載入中...</span></div>
+    <h3>幣別列表</h3>
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>幣別</th>
+          <th>幣別中文名稱</th>
+          <th>匯率</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
 
-  <h2>新增幣別</h2>
-  幣別代碼: <input id="code" type="text">
-  中文名稱: <input id="chineseName" type="text">
-  <button onclick="create()">新增</button>
-
-  <h2>更新幣別</h2>
-  幣別代碼: <input id="updateCode" type="text">
-  新中文名稱: <input id="updateChineseName" type="text">
-  <button onclick="update()">更新</button>
-
-  <h2>刪除幣別</h2>
-  幣別代碼: <input id="deleteCode" type="text">
-  <button onclick="deleteCurrency()">刪除</button>
+  <section>
+    <h2>幣別 CRUD</h2>
+    <div class="input-group">
+      <h3>新增</h3>
+      <label>幣別 <input id="createCode" placeholder="USD" /></label>
+      <label>幣別中文名稱 <input id="createName" placeholder="美元" /></label>
+      <label>匯率 <input id="createRate" placeholder="30.83" /></label>
+      <button onclick="createCurrency()">新增</button>
+    </div>
+    <div class="input-group">
+      <h3>修改</h3>
+      <label>幣別 <input id="updateCode" placeholder="USD" /></label>
+      <label>幣別中文名稱 <input id="updateName" placeholder="留空不變" /></label>
+      <label>匯率 <input id="updateRate" placeholder="留空不變" /></label>
+      <button onclick="updateCurrency()">修改</button>
+    </div>
+    <div class="input-group">
+      <h3>刪除</h3>
+      <label>幣別 <input id="deleteCode" placeholder="USD" required /></label>
+      <button onclick="deleteCurrency()">刪除</button>
+    </div>
+  </section>
 
   <script>
-    const API = '/api/coindesk';
+    const API = '/api';
 
-    function fetchAll() {
-      fetch(API)
-        .then(res => res.json())
-        .then(data => document.getElementById('resultArea').textContent = JSON.stringify(data, null, 2))
-        .catch(err => alert('錯誤：' + err));
+    // 讀取本地資料庫並顯示
+    async function loadData() {
+      try {
+        const res = await fetch(`${API}/coindesk/data`);
+        const obj = await res.json();
+        document.getElementById('updateTime').textContent = obj['更新時間'];
+        const tbody = document.querySelector('#dataTable tbody');
+        tbody.innerHTML = '';
+        obj['資料'].forEach(item => {
+          const tr = document.createElement('tr');
+
+          // 處理匯率格式：加上千分位，保留原始小數位數
+          const rateRaw = item['匯率'] || '';
+          let rateFmt = rateRaw;
+          const num = Number(rateRaw.replace(/,/g, ''));
+          if (!isNaN(num)) {
+            const decimals = rateRaw.includes('.') ? rateRaw.split('.')[1].length : 0;
+            rateFmt = num.toLocaleString('en-US', {
+              minimumFractionDigits: decimals,
+              maximumFractionDigits: decimals
+            });
+          }
+
+          // 幣別與中文名稱
+          ['幣別', '幣別中文名稱'].forEach(key => {
+            const td = document.createElement('td');
+            td.textContent = item[key] || '';
+            tr.appendChild(td);
+          });
+
+          // 格式化後的匯率
+          const tdRate = document.createElement('td');
+          tdRate.textContent = rateFmt;
+          tr.appendChild(tdRate);
+
+          tbody.appendChild(tr);
+        });
+
+      } catch (e) {
+        alert('讀取資料失敗：' + e);
+      }
     }
 
-    function create() {
-      const code = document.getElementById('code').value.trim();
-      const chineseName = document.getElementById('chineseName').value.trim();
-      fetch(API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, chineseName })
-      })
-      .then(res => res.ok ? fetchAll() : res.text().then(t => alert('新增失敗：' + t)))
+    // 新增後清空欄位並刷新
+    async function createCurrency() {
+      const codeInput = document.getElementById('createCode');
+      const nameInput = document.getElementById('createName');
+      const rateInput = document.getElementById('createRate');
+      const code = codeInput.value.trim();
+      const name = nameInput.value.trim();
+      const rate = rateInput.value.trim();
+      if (!code || !name || !rate) {
+        alert('請填寫完整的幣別、中文名稱與匯率');
+        return;
+      }
+      try {
+        const res = await fetch(`${API}/currency`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, name, rate })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => null);
+          alert(err?.error || `新增失敗：${res.status}`);
+        } else {
+          codeInput.value = '';
+          nameInput.value = '';
+          rateInput.value = '';
+          await loadData();
+        }
+      } catch (e) {
+        alert(`新增失敗：${e}`);
+      }
     }
 
-    function update() {
-      const code = document.getElementById('updateCode').value.trim();
-      const chineseName = document.getElementById('updateChineseName').value.trim();
-      fetch(`${API}/${code}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chineseName })
-      })
-      .then(res => res.ok ? fetchAll() : res.text().then(t => alert('更新失敗：' + t)))
+    // 修改後清空欄位並刷新
+    async function updateCurrency() {
+      const codeInput = document.getElementById('updateCode');
+      const nameInput = document.getElementById('updateName');
+      const rateInput = document.getElementById('updateRate');
+      const code = codeInput.value.trim();
+      if (!code) { alert('請填寫要修改的幣別代碼'); return; }
+      let name = nameInput.value.trim();
+      let rate = rateInput.value.trim();
+      try {
+        const resp = await fetch(`${API}/currency`);
+        const all = await resp.json();
+        const cur = all.find(c => c.code === code);
+        if (!cur) { alert('找不到此幣別'); return; }
+        if (!name) name = cur.name;
+        if (!rate) rate = cur.rate;
+        const res = await fetch(`${API}/currency/${encodeURIComponent(code)}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, rate })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => null);
+          alert(err?.error || `修改失敗：${res.status}`);
+        } else {
+          codeInput.value = '';
+          nameInput.value = '';
+          rateInput.value = '';
+          await loadData();
+        }
+      } catch (e) {
+        alert(`修改失敗：${e}`);
+      }
     }
 
-    function deleteCurrency() {
-      const code = document.getElementById('deleteCode').value.trim();
-      fetch(`${API}/${code}`, {
-        method: 'DELETE'
-      })
-      .then(res => res.ok ? fetchAll() : res.text().then(t => alert('刪除失敗：' + t)))
+    // 刪除後清空欄位並刷新
+    async function deleteCurrency() {
+      const codeInput = document.getElementById('deleteCode');
+      const code = codeInput.value.trim();
+      if (!code) { alert('請填寫要刪除的幣別代碼'); return; }
+      try {
+        const res = await fetch(`${API}/currency/${encodeURIComponent(code)}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const err = await res.json().catch(() => null);
+          alert(err?.error || `刪除失敗：${res.status}`);
+        } else {
+          codeInput.value = '';
+          await loadData();
+        }
+      } catch (e) {
+        alert(`刪除失敗：${e}`);
+      }
     }
+
+    window.onload = loadData;
   </script>
 </body>
+
 </html>
